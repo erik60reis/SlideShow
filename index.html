@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SlideShow</title>
+    <style>
+        .slide {
+            width: 854px;
+            height: 480px;
+        }
+    </style>
+</head>
+<body>
+    <div id="instuctions">
+        <div>INSTRUÇÕES: configure seus slides do jeito que preferir aqui. </div>
+        <br/>
+        <div>caso o slide seja do tipo imagem, o campo de texto do lado</div>
+        <div>deve estar no formato https://link-da-imagem.com</div>
+        <br/>
+        <div>caso o slide seja do tipo introdução, o campo de texto do lado</div>
+        <div>deve estar no formato TEMA_DO_SLIDE,https://link-da-imagem.com</div>
+        <br/>
+        <div>caso o slide seja do tipo tópicos, o campo de texto do lado</div>
+        <div>deve estar no formato título,tópico1,tópico2,tópico3,tópico4,...</div>
+    </div>
+    <br/>
+    <br/>
+    <div id="slideconfig">
+        
+    </div>
+    <button id="startPresentationButton">APRESENTAR</button>
+    <div id="slides">
+
+    </div>
+    <script>
+        let slidetemplatecount = 10;
+
+        for (let index = 0; index < slidetemplatecount; index++) {
+            document.getElementById("slideconfig").innerHTML += `
+            <div>------------------------------------SLIDE ${index + 1}--------------------------------------</div>
+            <select class="slidetype">
+                <option value="introduction">introdução</option>
+                <option value="topics">tópicos</option>
+                <option value="image">imagem</option>
+            </select>
+            <input class="slideconfig" type="text" size="50">
+            <br/>
+            <br/>
+            `;
+        }
+
+        const SlidesTemplate = {
+            introduction: (text, imageurl = '', textColor = 'black', backgroundColor = 'white') => {
+                return [
+                    [
+                        {type: "rectangle", color: backgroundColor, x: 0, y: 0, width: 1920, height: 1080},
+                        {type: "image", url: imageurl, x: 200, y: 200, width: 630, height: 630},
+                        {type: "text", font: "115px AftaSerif", color: textColor, text, x: 950, y: 508}
+                    ]
+                ]
+            },
+            topics: (topics, textColor = 'black', backgroundColor = 'white') => {
+                let title = topics.shift();
+
+                let templateComponentsBase = [
+                    {type: "rectangle", color: backgroundColor, x: 0, y: 0, width: 1920, height: 1080},
+                    {type: "text", font: "85px AftaSerif", color: textColor, text: title, x: 85, y: 85},
+                ];
+
+                let slides = [];
+
+                let slide = templateComponentsBase;
+
+                for (let questionindex = 0; questionindex < topics.length; questionindex++) {
+                    const question = topics[questionindex];
+                    slide.push({type: "text", font: "45px AftaSerif", color: textColor, text: `•  ${question}`, x: 140, y: 220 + 70 * questionindex});
+                    slides.push(slide.slice());
+                }
+
+
+                return slides;
+            },
+            image: (imageurl, backgroundColor = 'white') => {
+                return [
+                    [
+                        {type: "rectangle", color: backgroundColor, x: 0, y: 0, width: 1920, height: 1080},
+                        {type: "image", url: imageurl, x: 100, y: 100, width: 1700, height: 900},
+                    ]
+                ]
+            }
+        };
+
+        //const currentslidesconfig = SlidesTemplate.topics(["O que é Mata Atlântica ?", "Pra que ela serve ?", "O Quanto ela foi desmatada ?"]);
+
+        //let template1config = SlidesTemplate.image("https://imgs.search.brave.com/0Nj-8uhcj193U1F6HvvlUCIUVARyntNy7C7NiUFf1G0/rs:fit:500:0:0/g:ce/aHR0cHM6Ly9jb2xv/cmluZG8ub3JnL3dw/LWNvbnRlbnQvdXBs/b2Fkcy8yMDIxLzA3/L2Fydm9yZS1wYXJh/LXBpbnRhci5qcGc", "lightgray");
+        //let template1config = SlidesTemplate.introduction("Mata Atlântica", "https://imgs.search.brave.com/0Nj-8uhcj193U1F6HvvlUCIUVARyntNy7C7NiUFf1G0/rs:fit:500:0:0/g:ce/aHR0cHM6Ly9jb2xv/cmluZG8ub3JnL3dw/LWNvbnRlbnQvdXBs/b2Fkcy8yMDIxLzA3/L2Fydm9yZS1wYXJh/LXBpbnRhci5qcGc");
+        //let template2config = SlidesTemplate.topics(["Antes de começar...", "O que é Mata Atlântica ?", "Pra que ela serve ?", "O Quanto ela foi desmatada ?"]);
+
+        let currentslidesconfig = [];
+
+        document.getElementById("startPresentationButton").onclick = () => {
+            for (let index = 0; index < slidetemplatecount; index++) {
+                const slidetype = document.getElementsByClassName("slidetype")[index].value;
+                const slidetemplateconfig = document.getElementsByClassName("slideconfig")[index].value;
+
+                const slidetemplateconfigsplitted = slidetemplateconfig.split(",");
+
+                if (slidetemplateconfig !== "") {
+                    if (slidetype === "introduction") {
+                        currentslidesconfig.push(...SlidesTemplate.introduction(...slidetemplateconfigsplitted));
+                    }
+                    if (slidetype === "topics") {
+                        currentslidesconfig.push(...SlidesTemplate.topics([...slidetemplateconfigsplitted]));
+                    }
+                    if (slidetype === "image") {
+                        currentslidesconfig.push(...SlidesTemplate.image(...slidetemplateconfigsplitted));
+                    }
+                }
+            }
+            startPresentation(currentslidesconfig);
+        }
+
+        function startPresentation(slidesconfig) {
+            let usedImages = [];
+
+            for (let templateslideindex = 0; templateslideindex < slidesconfig.length; templateslideindex++) {
+                const components = slidesconfig[templateslideindex];
+                for (const slidecomponent of components) {
+                    if (slidecomponent.type === "image") {
+                        let img = new Image();
+                        img.src = slidecomponent.url;
+                        usedImages.push(img);
+                    }
+                }
+            }
+
+            if (usedImages.length <= 0) {
+                loadslides();
+            }else{
+                usedImages[usedImages.length - 1].onload = () => {
+                    loadslides();
+                }
+            }
+
+            function loadslides() {
+                let usedImageIndex = 0;
+
+                document.getElementById("slides").innerHTML = "";
+
+                for (let i = 0; i < slidesconfig.length; i++) {
+                    document.getElementById("slides").innerHTML += `<canvas class="slide" width="1920" height="1080"></canvas> <br/>`;
+                }
+
+                const slides = document.getElementsByClassName("slide");
+
+                for (let templateslideindex = 0; templateslideindex < slidesconfig.length; templateslideindex++) {
+                    const components = slidesconfig[templateslideindex];         
+                    const slidectx = slides[templateslideindex].getContext('2d');            
+                    for (const slidecomponent of components) {
+                        if (slidecomponent.type === "text") {
+                            slidectx.font = slidecomponent.font;
+                            slidectx.fillStyle = slidecomponent.color;
+                            slidectx.fillText(slidecomponent.text, slidecomponent.x, slidecomponent.y);
+                        }
+                        if (slidecomponent.type === "rectangle") {
+                            slidectx.fillStyle = slidecomponent.color;
+                            slidectx.fillRect(slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
+                        }
+                        if (slidecomponent.type === "image") {
+                            let image = usedImages[usedImageIndex];
+                            usedImageIndex += 1;
+                            slidectx.drawImage(image, slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
+                        }
+                        slidectx.fillStyle = "darkgreen";
+                        slidectx.font = "20px AftaSerif";
+                        slidectx.fillText("SlideShow by Erik Reis", 1500, 1020);
+                    }
+                }
+    
+                let currentIndex = 0;
+    
+                // Set the first canvas visible
+                slides[currentIndex].style.display = 'block';
+                showCanvas(0);
+    
+                // Function to show the canvas at given index
+                function showCanvas(index) {
+                    // Hide all slides
+                    for (let i = 0; i < slides.length; i++) {
+                        slides[i].style.display = 'none';
+                    }
+                    // Show the canvas at given index
+                    slides[index].style.display = 'block';
+                    enterFullScreen(slides[index]);
+                }
+
+                function enterFullScreen(element) {
+                   element.requestFullscreen().catch(err => {
+                        console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+                    });
+                }
+    
+                // Event listener for keyboard navigation
+                document.addEventListener('keydown', function(event) {
+                    if (event.key === 'ArrowRight') {
+                        // Move to the next canvas
+                        currentIndex = Math.max((currentIndex + 1) % slides.length, 0);
+                        showCanvas(currentIndex);
+                    } else if (event.key === 'ArrowLeft') {
+                        // Move to the previous canvas
+                        currentIndex = Math.min((currentIndex - 1 + slides.length) % slides.length, slides.length - 1);
+                        showCanvas(currentIndex);
+                    }
+                });
+            }
+        }
+
+
+    </script>
+</body>
+</html>
