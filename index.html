@@ -48,6 +48,16 @@
         
     </div>
     <button id="startPresentationButton">APRESENTAR</button>
+    <button id="exportconfigbutton">EXPORTAR CONFIGURAÇÃO</button>
+    <br/>
+    <br/>
+    <br/>
+    <br/>
+    <br/>
+    <div>ou importar configuração...</div>
+    <input id="slidejsonconfiginput" type="text"></input> <br/>
+    <button id="startPresentationByJSONConfigButton">APRESENTAR</button>
+
     <div id="slides">
     </div>
     <script>
@@ -129,7 +139,24 @@
 
         let currentslidesconfig = [];
 
+        
+
+        document.getElementById("exportconfigbutton").onclick = () => {
+            preparePresentation(true);
+        };
+
+
+        document.getElementById("startPresentationByJSONConfigButton").onclick = () => {
+            startPresentation(JSON.parse(document.getElementById("slidejsonconfiginput").value));
+        };
+
+
         document.getElementById("startPresentationButton").onclick = () => {
+            preparePresentation(false);
+        }
+
+        function preparePresentation(isExportConfigurationFunction = false) {
+            currentslidesconfig = [];
             for (let index = 0; index < slidetemplatecount; index++) {
                 const slidetype = document.getElementsByClassName("slidetype")[index].value;
                 const slidetemplateconfig = document.getElementsByClassName("slideconfig")[index].value;
@@ -151,7 +178,11 @@
                     }
                 }
             }
-            startPresentation(currentslidesconfig);
+            if (isExportConfigurationFunction) {
+                document.getElementById("slidejsonconfiginput").value = JSON.stringify(currentslidesconfig);
+            }else{
+                startPresentation(currentslidesconfig);
+            }
         }
         
         document.addEventListener('keydown', function(event) {
