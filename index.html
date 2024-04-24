@@ -3,11 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SlideShow</title>
+    <title>SlideShow by Erik Reis</title>
     <style>
         .slide {
+            width: 100%;
+            height: 100%;
+            z-index: 8;
+        }
+
+        .slide-container {
             width: 854px;
             height: 480px;
+        }
+
+        .video {
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            top: 10%;
+            left: 10%;
+            z-index: 10;
         }
     </style>
 </head>
@@ -15,14 +30,17 @@
     <div id="instuctions">
         <div>INSTRUÇÕES: configure seus slides do jeito que preferir aqui. </div>
         <br/>
-        <div>caso o slide seja do tipo imagem, o campo de texto do lado</div>
-        <div>deve estar no formato https://link-da-imagem.com</div>
-        <br/>
         <div>caso o slide seja do tipo introdução, o campo de texto do lado</div>
         <div>deve estar no formato TEMA_DO_SLIDE,https://link-da-imagem.com</div>
         <br/>
         <div>caso o slide seja do tipo tópicos, o campo de texto do lado</div>
         <div>deve estar no formato título,tópico1,tópico2,tópico3,tópico4,...</div>
+        <br/>
+        <div>caso o slide seja do tipo imagem, o campo de texto do lado</div>
+        <div>deve estar no formato https://link-da-imagem.com</div>
+        <br/>
+        <div>caso o slide seja do tipo vídeo, o campo de texto do lado</div>
+        <div>deve estar no formato https://youtube.com/watch?v=VÍDEO</div>
     </div>
     <br/>
     <br/>
@@ -31,10 +49,13 @@
     </div>
     <button id="startPresentationButton">APRESENTAR</button>
     <div id="slides">
-
     </div>
     <script>
         let slidetemplatecount = 10;
+
+        let slidecontainers = document.getElementsByClassName("slide-container");
+
+        let currentIndex = 0;
 
         for (let index = 0; index < slidetemplatecount; index++) {
             document.getElementById("slideconfig").innerHTML += `
@@ -43,6 +64,7 @@
                 <option value="introduction">introdução</option>
                 <option value="topics">tópicos</option>
                 <option value="image">imagem</option>
+                <option value="video">vídeo</option>
             </select>
             <input class="slideconfig" type="text" size="50">
             <br/>
@@ -56,7 +78,7 @@
                     [
                         {type: "rectangle", color: backgroundColor, x: 0, y: 0, width: 1920, height: 1080},
                         {type: "image", url: imageurl, x: 200, y: 200, width: 630, height: 630},
-                        {type: "text", font: "95px AftaSerif", color: textColor, text, x: 950, y: 508}
+                        {type: "text", font: "80px AftaSerif", color: textColor, text, x: 950, y: 508}
                     ]
                 ]
             },
@@ -88,6 +110,14 @@
                         {type: "image", url: imageurl, x: 100, y: 100, width: 1700, height: 900},
                     ]
                 ]
+            },
+            video: (videourl, backgroundColor = 'white') => {
+                return [
+                    [
+                        {type: "rectangle", color: backgroundColor, x: 0, y: 0, width: 1920, height: 1080},
+                        {type: "video", url: videourl},
+                    ]
+                ]
             }
         };
 
@@ -116,13 +146,46 @@
                     if (slidetype === "image") {
                         currentslidesconfig.push(...SlidesTemplate.image(...slidetemplateconfigsplitted));
                     }
+                    if (slidetype === "video") {
+                        currentslidesconfig.push(...SlidesTemplate.video(...slidetemplateconfigsplitted));
+                    }
                 }
             }
             startPresentation(currentslidesconfig);
         }
+        
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowRight') {
+                // Move to the next canvas
+                currentIndex = Math.min(currentIndex + 1, slidecontainers.length - 1);
+                showSlide(currentIndex);
+            } else if (event.key === 'ArrowLeft') {
+                // Move to the previous canvas
+                currentIndex = Math.max(currentIndex - 1, 0);
+                showSlide(currentIndex);
+            } else if (event.key === 'Escape') {
+                document.getElementById("slides").innerHTML = "";
+            }
+        });
 
+        // Function to show the canvas at given index
+        function showSlide(index) {
+            // Hide all slides
+            for (let i = 0; i < slides.length; i++) {
+                slidecontainers[i].style.display = 'none';
+            };
+            slidecontainers[index].style.display = 'block';
+            enterFullScreen(slidecontainers[index]);
+        }
+
+        function enterFullScreen(element) {
+            element.requestFullscreen().catch(err => {
+                console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        }
+
+        let usedImages = [];
         function startPresentation(slidesconfig) {
-            let usedImages = [];
 
             for (let templateslideindex = 0; templateslideindex < slidesconfig.length; templateslideindex++) {
                 const components = slidesconfig[templateslideindex];
@@ -136,84 +199,58 @@
             }
 
             if (usedImages.length <= 0) {
-                loadslides();
+                loadslides(slidesconfig);
             }else{
                 usedImages[usedImages.length - 1].onload = () => {
-                    loadslides();
+                    loadslides(slidesconfig);
+                }
+            }
+        }
+
+        function loadslides(slidesconfig) {
+            let usedImageIndex = 0;
+
+            document.getElementById("slides").innerHTML = "";
+
+            for (let i = 0; i < slidesconfig.length; i++) {
+                let videolayer = slidesconfig[i].find((element) => element.type == "video");
+                if (videolayer) {
+                    document.getElementById("slides").innerHTML += `<div class="slide-container"><canvas class="slide" width="1920" height="1080"></canvas><iframe class="video" width="854" height="480" src="https://www.youtube-nocookie.com/embed/${videolayer.url.replace("https://www.youtube.com/watch?v=", "").replace("https://youtube.be/", "")}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+                }else{
+                    document.getElementById("slides").innerHTML += `<div class="slide-container"><canvas class="slide" width="1920" height="1080"></canvas></div>`;
                 }
             }
 
-            function loadslides() {
-                let usedImageIndex = 0;
+            slidecontainers = document.getElementsByClassName("slide-container");
+            const slidescanvas = document.getElementsByClassName("slide");
 
-                document.getElementById("slides").innerHTML = "";
-
-                for (let i = 0; i < slidesconfig.length; i++) {
-                    document.getElementById("slides").innerHTML += `<canvas class="slide" width="1920" height="1080"></canvas> <br/>`;
-                }
-
-                const slides = document.getElementsByClassName("slide");
-
-                for (let templateslideindex = 0; templateslideindex < slidesconfig.length; templateslideindex++) {
-                    const components = slidesconfig[templateslideindex];         
-                    const slidectx = slides[templateslideindex].getContext('2d');            
-                    for (const slidecomponent of components) {
-                        if (slidecomponent.type === "text") {
-                            slidectx.font = slidecomponent.font;
-                            slidectx.fillStyle = slidecomponent.color;
-                            slidectx.fillText(slidecomponent.text, slidecomponent.x, slidecomponent.y);
-                        }
-                        if (slidecomponent.type === "rectangle") {
-                            slidectx.fillStyle = slidecomponent.color;
-                            slidectx.fillRect(slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
-                        }
-                        if (slidecomponent.type === "image") {
-                            let image = usedImages[usedImageIndex];
-                            usedImageIndex += 1;
-                            slidectx.drawImage(image, slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
-                        }
-                        slidectx.fillStyle = "darkgreen";
-                        slidectx.font = "20px AftaSerif";
-                        slidectx.fillText("SlideShow by Erik Reis", 1500, 1020);
+            for (let templateslideindex = 0; templateslideindex < slidesconfig.length; templateslideindex++) {
+                const components = slidesconfig[templateslideindex];         
+                const slidectx = slidescanvas[templateslideindex].getContext('2d');            
+                for (const slidecomponent of components) {
+                    if (slidecomponent.type === "text") {
+                        slidectx.font = slidecomponent.font;
+                        slidectx.fillStyle = slidecomponent.color;
+                        slidectx.fillText(slidecomponent.text, slidecomponent.x, slidecomponent.y);
                     }
-                }
-    
-                let currentIndex = 0;
-    
-                // Set the first canvas visible
-                slides[currentIndex].style.display = 'block';
-                showCanvas(currentIndex);
-    
-                // Function to show the canvas at given index
-                function showCanvas(index) {
-                    // Hide all slides
-                    for (let i = 0; i < slides.length; i++) {
-                        slides[i].style.display = 'none';
+                    if (slidecomponent.type === "rectangle") {
+                        slidectx.fillStyle = slidecomponent.color;
+                        slidectx.fillRect(slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
                     }
-                    // Show the canvas at given index
-                    slides[index].style.display = 'block';
-                    enterFullScreen(slides[index]);
-                }
-
-                function enterFullScreen(element) {
-                   element.requestFullscreen().catch(err => {
-                        console.log(`Error attempting to enable full-screen mode: ${err.message}`);
-                    });
-                }
-    
-                // Event listener for keyboard navigation
-                document.addEventListener('keydown', function(event) {
-                    if (event.key === 'ArrowRight') {
-                        // Move to the next canvas
-                        currentIndex = Math.max((currentIndex + 1) % slides.length, 0);
-                        showCanvas(currentIndex);
-                    } else if (event.key === 'ArrowLeft') {
-                        // Move to the previous canvas
-                        currentIndex = Math.min((currentIndex - 1 + slides.length) % slides.length, slides.length - 1);
-                        showCanvas(currentIndex);
+                    if (slidecomponent.type === "image") {
+                        let image = usedImages[usedImageIndex];
+                        usedImageIndex += 1;
+                        slidectx.drawImage(image, slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
                     }
-                });
+                    slidectx.fillStyle = "darkgreen";
+                    slidectx.font = "20px AftaSerif";
+                    slidectx.fillText("SlideShow by Erik Reis", 1500, 1020);
+                }
             }
+
+            currentIndex = 0;
+
+            showSlide(currentIndex);
         }
 
 
