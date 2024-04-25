@@ -60,6 +60,7 @@
 
     <div id="slides">
     </div>
+    <script src="qrcode.min.js"></script>
     <script>
         let slidetemplatecount = 10;
 
@@ -75,6 +76,7 @@
                 <option value="topics">tópicos</option>
                 <option value="image">imagem</option>
                 <option value="video">vídeo</option>
+                <option value="qrcode">qr code</option>
             </select>
             <input class="slideconfig" type="text" size="50">
             <br/>
@@ -128,6 +130,14 @@
                         {type: "video", url: videourl},
                     ]
                 ]
+            },
+            qrcode: (qrcodeurl, qrcodecolor = 'black', backgroundColor = 'white') => {
+                return [
+                    [
+                        {type: "rectangle", color: backgroundColor, x: 0, y: 0, width: 1920, height: 1080},
+                        {type: "qrcode", url: qrcodeurl, color: qrcodecolor, x: 760, y: 310, width: 400, height: 400},
+                    ]
+                ]
             }
         };
 
@@ -175,6 +185,9 @@
                     }
                     if (slidetype === "video") {
                         currentslidesconfig.push(...SlidesTemplate.video(...slidetemplateconfigsplitted));
+                    }
+                    if (slidetype === "qrcode") {
+                        currentslidesconfig.push(...SlidesTemplate.qrcode(...slidetemplateconfigsplitted));
                     }
                 }
             }
@@ -226,6 +239,20 @@
                         img.src = slidecomponent.url;
                         usedImages.push(img);
                     }
+                    if (slidecomponent.type === "qrcode") {
+                        let tempdiv = document.createElement("div");
+                        let qr = new QRCode(tempdiv, {
+                            text: slidecomponent.url,
+                            width: 500,
+                            height: 500,
+                            colorDark: slidecomponent.color
+                        });
+                        let tempcanvas = tempdiv.querySelector('canvas');
+                        let img = new Image();
+                        img.src = tempcanvas.toDataURL();
+                        console.log(img.src);
+                        usedImages.push(img);
+                    }
                 }
             }
 
@@ -268,7 +295,7 @@
                         slidectx.fillStyle = slidecomponent.color;
                         slidectx.fillRect(slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
                     }
-                    if (slidecomponent.type === "image") {
+                    if (["image", "qrcode"].includes(slidecomponent.type)) {
                         let image = usedImages[usedImageIndex];
                         usedImageIndex += 1;
                         slidectx.drawImage(image, slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
