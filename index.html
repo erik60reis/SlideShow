@@ -49,7 +49,7 @@
         <div class="text_green">...</div>
         <br/>
         <div>caso o slide seja do tipo imagem, o campo de texto do lado</div>
-        <div class="text_green">deve estar no formato:</div>
+        <div>deve estar no formato:</div>
         <div class="text_green">https://link-da-imagem.com</div>
         <br/>
         <div>caso o slide seja do tipo vídeo, o campo de texto do lado</div>
@@ -354,7 +354,7 @@
                         const videoUrl = videolayer.url;
 
                         // Add video to the slide (adjust position and size as needed)
-                        slide.addMedia({ type: 'video', path: videoUrl, x: 0.5, y: 0.5, w: 9, h: 5 });
+                        slide.addMedia({ type: 'video', path: null, x: 0.5, y: 0.5, w: 9, h: 5 });
                     }
                 }
 
