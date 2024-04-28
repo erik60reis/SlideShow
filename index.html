@@ -293,7 +293,7 @@
             for (let i = 0; i < slidesconfig.length; i++) {
                 let videolayer = slidesconfig[i].find((element) => element.type == "video");
                 if (videolayer) {
-                    document.getElementById("slides").innerHTML += `<div class="slide-container"><canvas class="slide" width="1920" height="1080"></canvas><iframe class="video" width="854" height="480" src="https://www.youtube-nocookie.com/embed/${videolayer.url.replace("https://www.youtube.com/watch?v=", "").replace("https://youtube.be/", "")}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+                    document.getElementById("slides").innerHTML += `<div class="slide-container"><canvas class="slide" width="1920" height="1080"></canvas><iframe class="video" width="854" height="480" src="https://www.youtube-nocookie.com/embed/${videolayer.url.replace("https://www.youtube.com/watch?v=", "").replace("https://youtube.be/", "").replace("https://youtube.com/shorts/")}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
                 }else{
                     document.getElementById("slides").innerHTML += `<div class="slide-container"><canvas class="slide" width="1920" height="1080"></canvas></div>`;
                 }
@@ -354,7 +354,7 @@
                         const videoUrl = videolayer.url;
 
                         // Add video to the slide (adjust position and size as needed)
-                        slide.addMedia({ type: 'video', path: null, x: 0.5, y: 0.5, w: 9, h: 5 });
+                        slide.addMedia({ type: 'online', link: `https://www.youtube-nocookie.com/embed/${videolayer.url.replace("https://www.youtube.com/watch?v=", "").replace("https://youtube.be/", "").replace("https://youtube.com/shorts/")}`, x: 0.5, y: 0.5, w: 9, h: 5 });
                     }
                 }
 
