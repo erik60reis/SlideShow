@@ -24,6 +24,10 @@
             left: 10%;
             z-index: 10;
         }
+
+        .text_green {
+            color: green;
+        }
     </style>
 </head>
 <body>
@@ -31,16 +35,26 @@
         <div>INSTRUÇÕES: configure seus slides do jeito que preferir aqui. </div>
         <br/>
         <div>caso o slide seja do tipo introdução, o campo de texto do lado</div>
-        <div>deve estar no formato TEMA_DO_SLIDE,https://link-da-imagem.com</div>
+        <div>deve estar no formato: 
+        <div class="text_green">TEMA_DO_SLIDE</div>
+        <div class="text_green">https://link-da-imagem.com</div>
         <br/>
         <div>caso o slide seja do tipo tópicos, o campo de texto do lado</div>
-        <div>deve estar no formato título,tópico1,tópico2,tópico3,tópico4,...</div>
+        <div>deve estar no formato:</div>
+        <div class="text_green">título</div>
+        <div class="text_green">tópico1</div>
+        <div class="text_green">tópico2</div>
+        <div class="text_green">tópico3</div>
+        <div class="text_green">tópico4</div>
+        <div class="text_green">...</div>
         <br/>
         <div>caso o slide seja do tipo imagem, o campo de texto do lado</div>
-        <div>deve estar no formato https://link-da-imagem.com</div>
+        <div class="text_green">deve estar no formato:</div>
+        <div class="text_green">https://link-da-imagem.com</div>
         <br/>
         <div>caso o slide seja do tipo vídeo, o campo de texto do lado</div>
-        <div>deve estar no formato https://youtube.com/watch?v=VÍDEO</div>
+        <div>deve estar no formato:
+        <div class="text_green">https://youtube.com/watch?v=VÍDEO</div>
     </div>
     <br/>
     <br/>
@@ -57,10 +71,14 @@
     <div>ou importar configuração...</div>
     <input id="slidejsonconfiginput" type="text"></input> <br/>
     <button id="startPresentationByJSONConfigButton">APRESENTAR</button>
+    <button id="exportToPPTX">EXPORTAR PARA POWERPOINT</button>
+    
 
     <div id="slides">
     </div>
     <script src="qrcode.min.js"></script>
+    <script src="pptxgen.bundle.js"></script>
+    <script src="FileSaver.min.js"></script>
     <script>
         let slidetemplatecount = 10;
 
@@ -78,7 +96,9 @@
                 <option value="video">vídeo</option>
                 <option value="qrcode">qr code</option>
             </select>
-            <input class="slideconfig" type="text" size="50">
+            <span>
+            <textarea class="slideconfig" type="text" size="50"></textarea>
+            </span>
             <br/>
             <br/>
             `;
@@ -165,13 +185,13 @@
             preparePresentation(false);
         }
 
-        function preparePresentation(isExportConfigurationFunction = false) {
+        function preparePresentation(isExportConfigurationFunction = false, exportToPPTX = false) {
             currentslidesconfig = [];
             for (let index = 0; index < slidetemplatecount; index++) {
                 const slidetype = document.getElementsByClassName("slidetype")[index].value;
                 const slidetemplateconfig = document.getElementsByClassName("slideconfig")[index].value;
 
-                const slidetemplateconfigsplitted = slidetemplateconfig.split(",");
+                const slidetemplateconfigsplitted = slidetemplateconfig.split("\n");
 
                 if (slidetemplateconfig !== "") {
                     if (slidetype === "introduction") {
@@ -194,7 +214,7 @@
             if (isExportConfigurationFunction) {
                 document.getElementById("slidejsonconfiginput").value = JSON.stringify(currentslidesconfig);
             }else{
-                startPresentation(currentslidesconfig);
+                startPresentation(currentslidesconfig, exportToPPTX);
             }
         }
         
@@ -229,7 +249,7 @@
         }
 
         let usedImages = [];
-        function startPresentation(slidesconfig) {
+        function startPresentation(slidesconfig, exportToPPTX = false) {
 
             for (let templateslideindex = 0; templateslideindex < slidesconfig.length; templateslideindex++) {
                 const components = slidesconfig[templateslideindex];
@@ -257,15 +277,15 @@
             }
 
             if (usedImages.length <= 0) {
-                loadslides(slidesconfig);
+                loadslides(slidesconfig, exportToPPTX);
             }else{
                 usedImages[usedImages.length - 1].onload = () => {
-                    loadslides(slidesconfig);
+                    loadslides(slidesconfigexportToPPTX);
                 }
             }
         }
 
-        function loadslides(slidesconfig) {
+        function loadslides(slidesconfig, exportToPPTX) {
             let usedImageIndex = 0;
 
             document.getElementById("slides").innerHTML = "";
@@ -309,8 +329,54 @@
             currentIndex = 0;
 
             showSlide(currentIndex);
+
+
+            if (exportToPPTX) {
+                const pptx = new PptxGenJS();
+
+                // Loop through each slide container
+                for (let i = 0; i < slidecontainers.length; i++) {
+                    const slideContainer = slidecontainers[i];
+                    const canvas = slideContainer.querySelector('canvas');
+
+                    // Get image data from canvas
+                    const imageData = canvas.toDataURL();
+
+                    // Check if the slide contains a YouTube video
+
+                    let videolayer = slidesconfig[i].find((element) => element.type == "video");
+
+                    const slide = pptx.addSlide();
+
+                    slide.addImage({ data: imageData, x: 0, y: 0, w: '100%', h: '100%' });
+
+                    if (videolayer) {
+                        const videoUrl = videolayer.url;
+
+                        // Add video to the slide (adjust position and size as needed)
+                        slide.addMedia({ type: 'video', path: videoUrl, x: 0.5, y: 0.5, w: 9, h: 5 });
+                    }
+                }
+
+                document.getElementById("slides").innerHTML = "";
+
+                // Generate the PowerPoint file
+                const pptxBlob = pptx.write('blob'); // Get base64-encoded PowerPoint data
+
+                pptxBlob.then((result) => {
+                    saveAs(result, 'presentation.pptx');
+                });
+            }   
         }
 
+        document.getElementById('exportToPPTX').onclick = function() {
+
+            startPresentation(JSON.parse(document.getElementById("slidejsonconfiginput").value), true);
+
+        };
+
+
+        
 
     </script>
 </body>
