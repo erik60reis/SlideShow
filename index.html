@@ -35,7 +35,7 @@
         <div>INSTRUÇÕES: configure seus slides do jeito que preferir aqui. </div>
         <br/>
         <div>caso o slide seja do tipo introdução, o campo de texto do lado</div>
-        <div>deve estar no formato: 
+        <div>deve estar no formato:</div>
         <div class="text_green">TEMA_DO_SLIDE</div>
         <div class="text_green">https://link-da-imagem.com</div>
         <br/>
@@ -53,8 +53,12 @@
         <div class="text_green">https://link-da-imagem.com</div>
         <br/>
         <div>caso o slide seja do tipo vídeo, o campo de texto do lado</div>
-        <div>deve estar no formato:
+        <div>deve estar no formato:</div>
         <div class="text_green">https://youtube.com/watch?v=VÍDEO</div>
+        <br/>
+        <div>caso o slide seja do tipo gráfico de barras, o campo de texto do lado</div>
+        <div>deve estar no formato:</div>
+        <div class="text_green">informação1:125,informação2:458,informação3:985</div>
     </div>
     <br/>
     <br/>
@@ -79,13 +83,18 @@
     <script src="qrcode.min.js"></script>
     <script src="pptxgen.bundle.js"></script>
     <script src="FileSaver.min.js"></script>
+    <script src="chart.js"></script>
     <script>
+        function delay(time) {
+            return new Promise(resolve => setTimeout(resolve, time));
+        }
+
         let slidetemplatecount = 10;
 
         let slidecontainers = document.getElementsByClassName("slide-container");
 
         let currentIndex = 0;
-
+        
         for (let index = 0; index < slidetemplatecount; index++) {
             document.getElementById("slideconfig").innerHTML += `
             <div>------------------------------------SLIDE ${index + 1}--------------------------------------</div>
@@ -95,6 +104,7 @@
                 <option value="image">imagem</option>
                 <option value="video">vídeo</option>
                 <option value="qrcode">qr code</option>
+                <option value="barchart">gráfico de barras</option>
             </select>
             <span>
             <textarea class="slideconfig" type="text" size="50"></textarea>
@@ -158,6 +168,14 @@
                         {type: "qrcode", url: qrcodeurl, color: qrcodecolor, x: 760, y: 310, width: 400, height: 400},
                     ]
                 ]
+            },
+            barchart: (data, backgroundColor = 'white') => {
+                return [
+                    [
+                        {type: "rectangle", color: backgroundColor, x: 0, y: 0, width: 1920, height: 1080},
+                        {type: "barchart", data: data, x: 192, y: 108, width: 1536, height: 864},
+                    ]
+                ]
             }
         };
 
@@ -209,6 +227,9 @@
                     if (slidetype === "qrcode") {
                         currentslidesconfig.push(...SlidesTemplate.qrcode(...slidetemplateconfigsplitted));
                     }
+                    if (slidetype === "barchart") {
+                        currentslidesconfig.push(...SlidesTemplate.barchart(...slidetemplateconfigsplitted));
+                    }
                 }
             }
             if (isExportConfigurationFunction) {
@@ -249,7 +270,7 @@
         }
 
         let usedImages = [];
-        function startPresentation(slidesconfig, exportToPPTX = false) {
+        async function startPresentation(slidesconfig, exportToPPTX = false) {
 
             for (let templateslideindex = 0; templateslideindex < slidesconfig.length; templateslideindex++) {
                 const components = slidesconfig[templateslideindex];
@@ -270,8 +291,47 @@
                         let tempcanvas = tempdiv.querySelector('canvas');
                         let img = new Image();
                         img.src = tempcanvas.toDataURL();
+                        usedImages.push(img);
+                    }
+                    if (slidecomponent.type === "barchart") {
+                        let tempcanvas = document.createElement("canvas");
+                        tempcanvas.width = slidecomponent.width;
+                        tempcanvas.height = slidecomponent.height;
+                        let chartdata = slidecomponent.data.split(",");
+                        let labels = [];
+                        let labelvalues = [];
+                        for (let i = 0; i < chartdata.length; i++) {
+                            const label = chartdata[i].split(":")[0];
+                            const labelvalue = chartdata[i].split(":")[1];
+                            labels.push(label);
+                            labelvalues.push(labelvalue);
+                        }
+                        new Chart(tempcanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: '',
+                                    data: labelvalues,
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                indexAxis: 'x',
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                        document.body.appendChild(tempcanvas);                        
+                        await delay(1200);
+                        let img = new Image();
+                        img.src = tempcanvas.toDataURL();
                         console.log(img.src);
                         usedImages.push(img);
+                        tempcanvas.remove();
                     }
                 }
             }
@@ -303,7 +363,8 @@
             const slidescanvas = document.getElementsByClassName("slide");
 
             for (let templateslideindex = 0; templateslideindex < slidesconfig.length; templateslideindex++) {
-                const components = slidesconfig[templateslideindex];         
+                const components = slidesconfig[templateslideindex];     
+                const slidecontatiner = slidecontainers[templateslideindex];    
                 const slidectx = slidescanvas[templateslideindex].getContext('2d');            
                 for (const slidecomponent of components) {
                     if (slidecomponent.type === "text") {
@@ -315,21 +376,18 @@
                         slidectx.fillStyle = slidecomponent.color;
                         slidectx.fillRect(slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
                     }
-                    if (["image", "qrcode"].includes(slidecomponent.type)) {
+                    if (["image", "qrcode", "barchart"].includes(slidecomponent.type)) {
                         let image = usedImages[usedImageIndex];
                         usedImageIndex += 1;
                         slidectx.drawImage(image, slidecomponent.x, slidecomponent.y, slidecomponent.width, slidecomponent.height);
                     }
                     slidectx.fillStyle = "darkgreen";
                     slidectx.font = "20px AftaSerif";
-                    slidectx.fillText("SlideShow by Erik Reis", 1500, 1020);
+                    slidectx.fillText("slideshow.erikreis.fun", 1500, 1020);
                 }
             }
 
             currentIndex = 0;
-
-            showSlide(currentIndex);
-
 
             if (exportToPPTX) {
                 const pptx = new PptxGenJS();
@@ -337,7 +395,7 @@
                 // Loop through each slide container
                 for (let i = 0; i < slidecontainers.length; i++) {
                     const slideContainer = slidecontainers[i];
-                    const canvas = slideContainer.querySelector('canvas');
+                    const canvas = slideContainer.querySelector('.slide');
 
                     // Get image data from canvas
                     const imageData = canvas.toDataURL();
@@ -366,7 +424,9 @@
                 pptxBlob.then((result) => {
                     saveAs(result, 'presentation.pptx');
                 });
-            }   
+            } else {
+                showSlide(currentIndex);
+            }
         }
 
         document.getElementById('exportToPPTX').onclick = function() {
@@ -375,8 +435,6 @@
 
         };
 
-
-        
 
     </script>
 </body>
